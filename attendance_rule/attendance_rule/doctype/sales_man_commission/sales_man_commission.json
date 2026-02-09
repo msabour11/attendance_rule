@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-04 16:01:07.029195",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "date",
+  "commission_amount",
+  "create_commission",
+  "create_additional_salary"
+ ],
+ "fields": [
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "commission_amount",
+   "fieldtype": "Currency",
+   "label": "Commission amount"
+  },
+  {
+   "fieldname": "create_commission",
+   "fieldtype": "Button",
+   "label": "Create commission"
+  },
+  {
+   "fieldname": "create_additional_salary",
+   "fieldtype": "Button",
+   "label": "Create Additional Salary"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-05 14:56:59.567549",
+ "modified_by": "Administrator",
+ "module": "Attendance Rule",
+ "name": "Sales Man Commission",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

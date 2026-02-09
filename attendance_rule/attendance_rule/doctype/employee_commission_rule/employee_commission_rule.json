@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "Employee Commission Rule-.####",
+ "creation": "2026-02-04 13:01:30.782143",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_nbrj",
+  "amended_from",
+  "sales_commission",
+  "enable_sales_component",
+  "sales_salary_component",
+  "section_break_niam",
+  "cash_commission",
+  "enable_cash_component",
+  "cash_salary_component"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_nbrj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Employee Commission Rule",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "sales_commission",
+   "fieldtype": "Table",
+   "label": "Sales Commission",
+   "options": "Sales Commission"
+  },
+  {
+   "fieldname": "section_break_niam",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "cash_commission",
+   "fieldtype": "Table",
+   "label": "Cash Commission",
+   "options": "Cash Commission"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_sales_component",
+   "fieldtype": "Check",
+   "label": "Enable Sales Component"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_cash_component",
+   "fieldtype": "Check",
+   "label": "Enable Cash Component"
+  },
+  {
+   "depends_on": "eval:doc.enable_sales_component==1",
+   "fieldname": "sales_salary_component",
+   "fieldtype": "Link",
+   "label": "Sales Salary Component",
+   "link_filters": "[[\"Salary Component\",\"custom_is_commission\",\"=\",1]]",
+   "options": "Salary Component"
+  },
+  {
+   "depends_on": "eval:doc.enable_cash_component==1",
+   "fieldname": "cash_salary_component",
+   "fieldtype": "Link",
+   "label": "Cash Salary Component",
+   "options": "Salary Component"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-02-05 15:13:46.976404",
+ "modified_by": "Administrator",
+ "module": "Attendance Rule",
+ "name": "Employee Commission Rule",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

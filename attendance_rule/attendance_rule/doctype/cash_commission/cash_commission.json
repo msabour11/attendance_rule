@@ -1,0 +1,43 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-04 13:10:04.327812",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "commission_rate",
+  "total_cash",
+  "enable"
+ ],
+ "fields": [
+  {
+   "fieldname": "commission_rate",
+   "fieldtype": "Float",
+   "label": "Commission Rate"
+  },
+  {
+   "fieldname": "total_cash",
+   "fieldtype": "Currency",
+   "label": "Total Cash"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable",
+   "fieldtype": "Check",
+   "label": "Enable"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-04 13:24:45.916606",
+ "modified_by": "Administrator",
+ "module": "Attendance Rule",
+ "name": "Cash Commission",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
