@@ -103,3 +103,116 @@ def create_additional_salary(sales_person, rule, date, amount):
     additional_salary.insert()
     additional_salary.submit()
     return additional_salary.name
+
+
+# This function calculates cash commission based on payments received for sales invoices linked to the salesperson.
+@frappe.whitelist()
+def calculate_cash_commission(sales_person, rule, date=None):
+    if not sales_person or not rule:
+        frappe.throw("Sales Person and Commission Rule are required.")
+
+    # ----------------------------------------------------
+    # 1. Resolve date range (current month default)
+    # ----------------------------------------------------
+    if not date:
+        date = today()
+
+    start_date = get_first_day(date)
+    end_date = get_last_day(date)
+
+    # ----------------------------------------------------
+    # 2. Get total CASH collected for this salesperson
+    #    (from Payment Entry allocated to Sales Invoices)
+    # ----------------------------------------------------
+    total_cash = frappe.db.sql(
+        """
+        SELECT IFNULL(SUM(per.allocated_amount), 0)
+        FROM `tabPayment Entry` pe
+        JOIN `tabPayment Entry Reference` per 
+            ON per.parent = pe.name
+        JOIN `tabSales Invoice` si
+            ON si.name = per.reference_name
+        JOIN `tabSales Team` st
+            ON st.parent = si.name
+        WHERE pe.docstatus = 1
+          AND pe.posting_date BETWEEN %s AND %s
+          AND st.sales_person = %s
+        """,
+        (start_date, end_date, sales_person),
+    )[0][0]
+
+    if total_cash <= 0:
+        return {"sales_person": sales_person, "total_cash": 0, "commission_amount": 0}
+
+    # ----------------------------------------------------
+    # 3. Get Cash Commission Slabs
+    # ----------------------------------------------------
+    rule_doc = frappe.get_doc("Employee Commission Rule", rule)
+
+    if not rule_doc.cash_commission:
+        return
+
+    slabs = sorted(
+        [s for s in rule_doc.cash_commission if s.enable], key=lambda x: x.target_from
+    )
+
+    # ----------------------------------------------------
+    # 4. Progressive Slab Calculation
+    # ----------------------------------------------------
+    commission_total = 0
+    remaining_cash = total_cash
+
+    for slab in slabs:
+        slab_from = slab.target_from or 0
+        slab_to = slab.target_to or float("inf")
+        rate = slab.commission_rate or 0  # percentage
+
+        if remaining_cash <= 0:
+            break
+
+        slab_range = slab_to - slab_from
+
+        # Amount eligible inside this slab
+        applicable_amount = min(max(total_cash - slab_from, 0), slab_range)
+
+        if applicable_amount > 0:
+            commission_total += applicable_amount * (rate / 100)
+
+    return {
+        "sales_person": sales_person,
+        "from_date": start_date,
+        "to_date": end_date,
+        "total_cash": total_cash,
+        "commission_amount": commission_total,
+    }
+
+
+@frappe.whitelist()
+def create_cash_additional_salary(sales_person, rule, date, amount):
+    if not sales_person or not rule or not date or not amount:
+        frappe.throw("All parameters are required.")
+
+    employee = frappe.db.get_value("Sales Person", sales_person, "employee")
+    if not employee:
+        frappe.throw("No employee linked to this sales person.")
+    rule_doc = frappe.get_doc("Employee Commission Rule", rule)
+    salary_component = rule_doc.cash_salary_component
+    if not salary_component:
+        frappe.throw("Commission Rule must have a linked Cash Salary Component.")
+    if flt(amount) <= 0:
+        frappe.throw("Commission amount must be greater than zero.")
+
+    additional_salary = frappe.get_doc(
+        {
+            "doctype": "Additional Salary",
+            "employee": employee,
+            "salary_component": salary_component,
+            "amount": flt(amount),
+            "from_date": date,
+            "to_date": date,
+            "description": f"Cash Commission for {date}",
+        }
+    )
+    additional_salary.insert()
+    additional_salary.submit()
+    return additional_salary.name
