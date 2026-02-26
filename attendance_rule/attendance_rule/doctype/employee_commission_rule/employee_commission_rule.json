@@ -14,7 +14,10 @@
   "section_break_niam",
   "cash_commission",
   "enable_cash_component",
-  "cash_salary_component"
+  "cash_salary_component",
+  "section_break_rxwb",
+  "enable_deduction_component",
+  "deduction_salary_component"
  ],
  "fields": [
   {
@@ -73,12 +76,28 @@
    "fieldtype": "Link",
    "label": "Cash Salary Component",
    "options": "Salary Component"
+  },
+  {
+   "fieldname": "section_break_rxwb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_deduction_component",
+   "fieldtype": "Check",
+   "label": "Enable Deduction Component"
+  },
+  {
+   "fieldname": "deduction_salary_component",
+   "fieldtype": "Link",
+   "label": "Deduction Salary Component",
+   "options": "Salary Component"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-05 15:13:46.976404",
+ "modified": "2026-02-25 14:14:12.580602",
  "modified_by": "Administrator",
  "module": "Attendance Rule",
  "name": "Employee Commission Rule",
