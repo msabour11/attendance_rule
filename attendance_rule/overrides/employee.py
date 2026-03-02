@@ -1,6 +1,6 @@
 import frappe
 import frappe
-from frappe.utils import getdate, get_datetime, time_diff_in_hours
+from frappe.utils import getdate, get_datetime, time_diff_in_hours, flt
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -63,4 +63,58 @@ def calculate_deduction(employee, date):
         "Employee", employee, "custom_monthly_deduction_hours", total_deduction_hours
     )
 
+    employee_salary_hourly = calculate_employee_salary_hourly(employee)
+    total_deduction_amount = total_deduction_hours * employee_salary_hourly
+    frappe.db.set_value(
+        "Employee",
+        employee,
+        "custom_monthly_deduction_hours_cost",
+        total_deduction_amount,
+    )
+
     return round(total_deduction_hours, 2)
+
+
+def calculate_employee_salary_hourly(employee):
+    if not employee:
+        frappe.throw("Employee is required")
+
+    emp = frappe.get_doc("Employee", employee)
+    salary = emp.ctc / 12 / 8
+    return round(salary, 2)
+
+
+@frappe.whitelist()
+def create_deduction_salary(employee):
+    if not employee:
+        frappe.throw("Employee is required")
+    emp = frappe.get_doc("Employee", employee)
+
+    rule_doc = frappe.get_doc(
+        "Employee Commission Rule", {"name": emp.custom_attendance_rule}
+    )
+    salary_component = rule_doc.deduction_salary_component
+    if not salary_component:
+        frappe.throw("Deduction Salary Component is not defined in the rule")
+
+    deduction_hours = emp.custom_monthly_deduction_hours
+    deduction_amount = emp.custom_monthly_deduction_hours_cost
+
+    if flt(deduction_hours) <= 0:
+        return "No deduction hours to create salary slip"
+
+    # Create Salary Slip
+    additional_salary = frappe.get_doc(
+        {
+            "doctype": "Additional Salary",
+            "employee": employee,
+            "salary_component": salary_component,
+            "amount": flt(deduction_amount),
+            # "from_date": date,
+            # "to_date": date,
+            "description": f"Deduction for {deduction_hours} hours",
+        }
+    )
+    additional_salary.insert()
+    # additional_salary.submit()
+    return f"Additional Salary created with deduction of {deduction_amount}"

@@ -17,4 +17,17 @@ frappe.ui.form.on("Employee", {
 			});
 		});
 	},
+	custom_create_deduction_salary: function (frm) {
+		frappe.call({
+			method: "attendance_rule.overrides.employee.create_deduction_salary",
+			args: {
+				employee: frm.doc.name,
+			},
+			callback: function (r) {
+				if (r.message) {
+					frappe.msgprint(__("Deduction salary created successfully."));
+				}
+			},
+		});
+	},
 });
