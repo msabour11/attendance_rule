@@ -112,9 +112,10 @@ def create_deduction_salary(employee):
             "amount": flt(deduction_amount),
             # "from_date": date,
             # "to_date": date,
+            "payroll_date": date,
             "description": f"Deduction for {deduction_hours} hours",
         }
     )
     additional_salary.insert()
-    # additional_salary.submit()
+    additional_salary.submit()
     return f"Additional Salary created with deduction of {deduction_amount}"

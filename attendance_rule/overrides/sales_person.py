@@ -30,15 +30,15 @@ def calculate_employee_commission(sales_person, rule, date=None):
     #     (sales_person, start_date, end_date),
     # )[0][0]
     total_sales = frappe.db.sql(
-		"""
+        """
 		SELECT IFNULL(SUM(net_total), 0)
 		FROM `tabSales Invoice`
 		WHERE sales_person = %s
 		  AND docstatus = 1
 		  AND posting_date BETWEEN %s AND %s
 		""",
-		(sales_person, start_date, end_date),
-	)[0][0]
+        (sales_person, start_date, end_date),
+    )[0][0]
 
     if total_sales <= 0:
         return 0
@@ -107,6 +107,7 @@ def create_additional_salary(sales_person, rule, date, amount):
             "amount": flt(amount),
             "from_date": date,
             "to_date": date,
+            "payroll_date": date,
             "description": f"Commission for {date}",
         }
     )
@@ -280,9 +281,11 @@ def create_cash_additional_salary(sales_person, rule, date, amount):
             "amount": flt(amount),
             "from_date": date,
             "to_date": date,
+            "payroll_date": date,
             "description": f"Cash Commission for {date}",
         }
     )
     additional_salary.insert()
     additional_salary.submit()
+    # additional_salary.save()
     return additional_salary.name
