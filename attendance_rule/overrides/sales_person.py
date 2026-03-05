@@ -18,17 +18,27 @@ def calculate_employee_commission(sales_person, rule, date=None):
     # ----------------------------------------------------
     # 2. Get total sales for the salesperson (this month)
     # ----------------------------------------------------
+    # total_sales = frappe.db.sql(
+    #     """
+    #     SELECT IFNULL(SUM(si.net_total), 0)
+    #     FROM `tabSales Invoice` si
+    #     JOIN `tabSales Team` st ON st.parent = si.name
+    #     WHERE st.sales_person = %s
+    #       AND si.docstatus = 1
+    #       AND si.posting_date BETWEEN %s AND %s
+    #     """,
+    #     (sales_person, start_date, end_date),
+    # )[0][0]
     total_sales = frappe.db.sql(
-        """
-        SELECT IFNULL(SUM(si.net_total), 0)
-        FROM `tabSales Invoice` si
-        JOIN `tabSales Team` st ON st.parent = si.name
-        WHERE st.sales_person = %s
-          AND si.docstatus = 1
-          AND si.posting_date BETWEEN %s AND %s
-        """,
-        (sales_person, start_date, end_date),
-    )[0][0]
+		"""
+		SELECT IFNULL(SUM(net_total), 0)
+		FROM `tabSales Invoice`
+		WHERE sales_person = %s
+		  AND docstatus = 1
+		  AND posting_date BETWEEN %s AND %s
+		""",
+		(sales_person, start_date, end_date),
+	)[0][0]
 
     if total_sales <= 0:
         return 0
