@@ -86,4 +86,21 @@ frappe.ui.form.on("Sales Man Commission", {
 			},
 		});
 	},
+	create_cash_je: function (frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+		frappe.call({
+			method: "attendance_rule.overrides.sales_person.create_cash_journal_entry",
+			args: {
+				sales_person: frm.doc.name,
+				rule: frm.doc.custom_employee_commission_rule,
+				amount: row.cash_commission_amount,
+				employee: frm.doc.employee,
+			},
+			callback: function (r) {
+				if (r.message) {
+					frappe.msgprint("Cash Commission Journal Entry Created");
+				}
+			},
+		});
+	},
 });

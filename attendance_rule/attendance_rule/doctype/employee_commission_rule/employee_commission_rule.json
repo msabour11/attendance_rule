@@ -15,6 +15,7 @@
   "cash_commission",
   "enable_cash_component",
   "cash_salary_component",
+  "cash_account",
   "section_break_rxwb",
   "enable_deduction_component",
   "deduction_salary_component"
@@ -92,12 +93,18 @@
    "fieldtype": "Link",
    "label": "Deduction Salary Component",
    "options": "Salary Component"
+  },
+  {
+   "fieldname": "cash_account",
+   "fieldtype": "Link",
+   "label": "Cash Account",
+   "options": "Account"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-25 14:14:12.580602",
+ "modified": "2026-04-04 17:55:39.785945",
  "modified_by": "Administrator",
  "module": "Attendance Rule",
  "name": "Employee Commission Rule",

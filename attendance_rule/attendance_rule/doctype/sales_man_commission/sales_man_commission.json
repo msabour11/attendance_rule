@@ -12,7 +12,8 @@
   "create_additional_salary",
   "cash_commission_amount",
   "create_cash_commission",
-  "create_cash_additional_salary"
+  "create_cash_additional_salary",
+  "create_cash_je"
  ],
  "fields": [
   {
@@ -51,12 +52,17 @@
    "fieldname": "create_cash_additional_salary",
    "fieldtype": "Button",
    "label": "Create Cash Additional Salary"
+  },
+  {
+   "fieldname": "create_cash_je",
+   "fieldtype": "Button",
+   "label": "Create Cash JE"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-18 15:51:54.652670",
+ "modified": "2026-04-04 17:51:31.218530",
  "modified_by": "Administrator",
  "module": "Attendance Rule",
  "name": "Sales Man Commission",

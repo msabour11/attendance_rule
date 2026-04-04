@@ -40,40 +40,35 @@ def calculate_employee_commission(sales_person, rule, date=None):
         (sales_person, start_date, end_date),
     )[0][0]
 
-    if total_sales <= 0:
-        return 0
-
-    # ----------------------------------------------------
-    # 3. Get commission rule slabs
-    # ----------------------------------------------------
     rule_doc = frappe.get_doc("Employee Commission Rule", rule)
     if not rule_doc.sales_commission:
-        return
+        return {
+            "sales_person": sales_person,
+            "from_date": start_date,
+            "to_date": end_date,
+            "total_sales": total_sales,
+            "commission_amount": 0,
+        }
 
     slabs = sorted(
         [s for s in rule_doc.sales_commission if s.enable], key=lambda x: x.target_from
     )
 
-    # ----------------------------------------------------
-    # 4. Calculate tier-based commission
-    # ----------------------------------------------------
     commission_total = 0
-    remaining_sales = total_sales
 
-    for slab in slabs:
-        if remaining_sales <= 0:
-            break
+    if total_sales > 0:
+        matching_slab = next(
+            (
+                slab
+                for slab in slabs
+                if total_sales >= flt(slab.target_from)
+                and (not slab.target_to or total_sales <= flt(slab.target_to))
+            ),
+            None,
+        )
 
-        slab_from = slab.target_from or 0
-        slab_to = slab.target_to or float("inf")
-        slab_amount = slab.commission_amount or 0
-
-        slab_range = slab_to - slab_from
-        applicable_amount = min(remaining_sales, slab_range)
-
-        if applicable_amount > 0:
-            commission_total += slab_amount
-            remaining_sales -= applicable_amount
+        if matching_slab:
+            commission_total = flt(matching_slab.commission_amount)
 
     return {
         "sales_person": sales_person,
@@ -116,145 +111,69 @@ def create_additional_salary(sales_person, rule, date, amount):
     return additional_salary.name
 
 
-# This function calculates cash commission based on payments received for sales invoices linked to the salesperson.
-# @frappe.whitelist()
-# def calculate_cash_commission(sales_person, rule, date=None):
-#     if not sales_person or not rule:
-#         frappe.throw("Sales Person and Commission Rule are required.")
-
-#     # ----------------------------------------------------
-#     # 1. Resolve date range (current month default)
-#     # ----------------------------------------------------
-#     if not date:
-#         date = today()
-
-#     start_date = get_first_day(date)
-#     end_date = get_last_day(date)
-
-#     # ----------------------------------------------------
-#     # 2. Get total CASH collected for this salesperson
-#     #    (from Payment Entry allocated to Sales Invoices)
-#     # ----------------------------------------------------
-#     total_cash = frappe.db.sql(
-#         """
-#         SELECT IFNULL(SUM(per.allocated_amount), 0)
-#         FROM `tabPayment Entry` pe
-#         JOIN `tabPayment Entry Reference` per
-#             ON per.parent = pe.name
-#         JOIN `tabSales Invoice` si
-#             ON si.name = per.reference_name
-#         JOIN `tabSales Team` st
-#             ON st.parent = si.name
-#         WHERE pe.docstatus = 1
-#           AND pe.posting_date BETWEEN %s AND %s
-#           AND st.sales_person = %s
-#         """,
-#         (start_date, end_date, sales_person),
-#     )[0][0]
-
-#     if total_cash <= 0:
-#         return {"sales_person": sales_person, "total_cash": 0, "commission_amount": 0}
-
-#     # ----------------------------------------------------
-#     # 3. Get Cash Commission Slabs
-#     # ----------------------------------------------------
-#     rule_doc = frappe.get_doc("Employee Commission Rule", rule)
-
-#     if not rule_doc.cash_commission:
-#         return
-
-#     slabs = sorted(
-#         [s for s in rule_doc.cash_commission if s.enable], key=lambda x: x.target_from
-#     )
-
-#     # ----------------------------------------------------
-#     # 4. Progressive Slab Calculation
-#     # ----------------------------------------------------
-#     commission_total = 0
-#     remaining_cash = total_cash
-
-#     for slab in slabs:
-#         slab_from = slab.target_from or 0
-#         slab_to = slab.target_to or float("inf")
-#         rate = slab.commission_rate or 0  # percentage
-
-#         if remaining_cash <= 0:
-#             break
-
-#         slab_range = slab_to - slab_from
-
-#         # Amount eligible inside this slab
-#         applicable_amount = min(max(total_cash - slab_from, 0), slab_range)
-
-#         if applicable_amount > 0:
-#             commission_total += applicable_amount * (rate / 100)
-
-#     return {
-#         "sales_person": sales_person,
-#         "from_date": start_date,
-#         "to_date": end_date,
-#         "total_cash": total_cash,
-#         "commission_amount": commission_total,
-#     }
-
-
-################cash commission
+# cash commission
 @frappe.whitelist()
 def calculate_cash_commission(sales_person, rule, date=None):
-    if not sales_person:
-        frappe.throw("Sales Person is required.")
+    if not sales_person or not rule:
+        frappe.throw("Sales Person and Commission Rule are required.")
 
     if not date:
         date = today()
 
     start_date = get_first_day(date)
     end_date = get_last_day(date)
-
-    # ----------------------------------------------------
-    # 1. Get total received cash
-    # ----------------------------------------------------
-    total_cash = frappe.db.sql(
+    invoices = frappe.db.sql(
         """
-        SELECT IFNULL(SUM(pe.paid_amount), 0)
-        FROM `tabPayment Entry` pe
-        WHERE pe.docstatus = 1
-          AND pe.payment_type = 'Receive'
-          AND pe.posting_date BETWEEN %s AND %s
-          AND pe.sales_person = %s
+        SELECT
+            si.name,
+            si.net_total,
+            si.outstanding_amount
+        FROM `tabSales Invoice` si
+        WHERE si.sales_person = %s
+          AND si.docstatus = 1
+          AND si.posting_date BETWEEN %s AND %s
         """,
-        (start_date, end_date, sales_person),
-    )[0][0]
+        (sales_person, start_date, end_date),
+        as_dict=True,
+    )
+
+    total_net_total = flt(sum(flt(invoice.net_total) for invoice in invoices), 2)
+    total_outstanding = flt(
+        sum(flt(invoice.outstanding_amount) for invoice in invoices), 2
+    )
+
+    rule_doc = frappe.get_doc("Employee Commission Rule", rule)
+    slabs = sorted(
+        [slab for slab in rule_doc.cash_commission if slab.enable],
+        key=lambda slab: slab.target_from or 0,
+    )
 
     commission = 0
 
-    # ----------------------------------------------------
-    # Threshold must reach 100k first
-    # ----------------------------------------------------
-    if total_cash >= 100000:
+    if total_net_total > 0 and total_outstanding == 0:
+        matching_slab = next(
+            (
+                slab
+                for slab in slabs
+                if total_net_total >= flt(slab.target_from)
+                and (not slab.target_to or total_net_total <= flt(slab.target_to))
+            ),
+            None,
+        )
 
-        # First 100k → 1%
-        commission += 100000 * 0.01
-
-        # ------------------------------------------------
-        # Second 100k → 1.5%
-        # ------------------------------------------------
-        if total_cash > 100000:
-            second_tier_amount = min(total_cash - 100000, 100000)
-            commission += second_tier_amount * 0.015
-
-        # ------------------------------------------------
-        # Above 200k → 2%
-        # ------------------------------------------------
-        if total_cash > 200000:
-            third_tier_amount = total_cash - 200000
-            commission += third_tier_amount * 0.02
+        if matching_slab:
+            commission = flt(
+                total_net_total * (flt(matching_slab.commission_rate) / 100), 2
+            )
 
     return {
         "sales_person": sales_person,
         "from_date": start_date,
         "to_date": end_date,
-        "total_cash": total_cash,
-        "commission_amount": round(commission, 2),
+        "total_cash": total_net_total,
+        "total_net_total": total_net_total,
+        "total_outstanding": total_outstanding,
+        "commission_amount": commission,
     }
 
 
@@ -289,3 +208,70 @@ def create_cash_additional_salary(sales_person, rule, date, amount):
     additional_salary.submit()
     # additional_salary.save()
     return additional_salary.name
+
+
+@frappe.whitelist()
+def create_cash_journal_entry(sales_person, rule, amount, employee):
+    if not sales_person or not rule or not amount or not employee:
+        frappe.throw("All parameters are required.")
+
+    rule_doc = frappe.get_doc("Employee Commission Rule", rule)
+
+    salary_component_name = rule_doc.cash_salary_component
+    if not salary_component_name:
+        frappe.throw("Commission Rule must have a linked Cash Salary Component.")
+
+    salary_component = frappe.get_doc("Salary Component", salary_component_name)
+
+    # Guard against empty accounts table
+    if not salary_component.accounts:
+        frappe.throw("Salary Component has no linked accounts.")
+
+    debit_account = salary_component.accounts[0].account  # expense account
+    if not debit_account:
+        frappe.throw("Salary Component account is not set.")
+
+    credit_account = rule_doc.cash_account  # cash/bank account
+    if not credit_account:
+        frappe.throw("Commission Rule must have a linked Cash Account.")
+
+    if flt(amount) <= 0:
+        frappe.throw("Commission amount must be greater than zero.")
+
+    company = frappe.get_value("Employee", employee, "company")
+
+    je = frappe.get_doc(
+        {
+            "doctype": "Journal Entry",
+            "posting_date": today(),
+            "user_remark": f"Cash Commission for {sales_person} on {today()}",  # fixed field name
+            "company": company,
+        }
+    )
+
+    # Debit the expense (salary component) account
+    je.append(
+        "accounts",
+        {
+            "account": debit_account,
+            "debit_in_account_currency": flt(amount),
+            "party_type": "Employee",
+            "party": employee,
+            "user_remark": f"Commission for Sales Person: {sales_person}",
+        },
+    )
+
+    # Credit the cash account
+    je.append(
+        "accounts",
+        {
+            "account": credit_account,
+            "credit_in_account_currency": flt(amount),
+            "party_type": "Employee",
+            "party": employee,
+        },
+    )
+
+    je.insert()
+    # je.submit()
+    return je.name
