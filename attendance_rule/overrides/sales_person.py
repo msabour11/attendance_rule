@@ -18,27 +18,27 @@ def calculate_employee_commission(sales_person, rule, date=None):
     # ----------------------------------------------------
     # 2. Get total sales for the salesperson (this month)
     # ----------------------------------------------------
-    # total_sales = frappe.db.sql(
-    #     """
-    #     SELECT IFNULL(SUM(si.net_total), 0)
-    #     FROM `tabSales Invoice` si
-    #     JOIN `tabSales Team` st ON st.parent = si.name
-    #     WHERE st.sales_person = %s
-    #       AND si.docstatus = 1
-    #       AND si.posting_date BETWEEN %s AND %s
-    #     """,
-    #     (sales_person, start_date, end_date),
-    # )[0][0]
     total_sales = frappe.db.sql(
         """
-		SELECT IFNULL(SUM(net_total), 0)
-		FROM `tabSales Invoice`
-		WHERE sales_person = %s
-		  AND docstatus = 1
-		  AND posting_date BETWEEN %s AND %s
-		""",
+        SELECT IFNULL(SUM(si.net_total), 0)
+        FROM `tabSales Invoice` si
+        JOIN `tabSales Team` st ON st.parent = si.name
+        WHERE st.sales_person = %s
+          AND si.docstatus = 1
+          AND si.posting_date BETWEEN %s AND %s
+        """,
         (sales_person, start_date, end_date),
     )[0][0]
+    # total_sales = frappe.db.sql(
+    #     """
+    # 	SELECT IFNULL(SUM(net_total), 0)
+    # 	FROM `tabSales Invoice`
+    # 	WHERE sales_person = %s
+    # 	  AND docstatus = 1
+    # 	  AND posting_date BETWEEN %s AND %s
+    # 	""",
+    #     (sales_person, start_date, end_date),
+    # )[0][0]
 
     rule_doc = frappe.get_doc("Employee Commission Rule", rule)
     if not rule_doc.sales_commission:
@@ -122,17 +122,30 @@ def calculate_cash_commission(sales_person, rule, date=None):
 
     start_date = get_first_day(date)
     end_date = get_last_day(date)
+    # invoices = frappe.db.sql(
+    #     """
+    #     SELECT
+    #         si.name,
+    #         si.net_total,
+    #         si.outstanding_amount
+    #     FROM `tabSales Invoice` si
+    #     WHERE si.sales_person = %s
+    #       AND si.docstatus = 1
+    #       AND si.posting_date BETWEEN %s AND %s
+    #     """,
+    #     (sales_person, start_date, end_date),
+    #     as_dict=True,
+    # )
+
     invoices = frappe.db.sql(
         """
-        SELECT
-            si.name,
-            si.net_total,
-            si.outstanding_amount
-        FROM `tabSales Invoice` si
-        WHERE si.sales_person = %s
-          AND si.docstatus = 1
-          AND si.posting_date BETWEEN %s AND %s
-        """,
+    SELECT  si.name, si.net_total, si.outstanding_amount
+    FROM `tabSales Invoice` si
+    JOIN `tabSales Team` st ON st.parent = si.name
+    WHERE st.sales_person = %s
+        AND si.docstatus = 1
+        AND si.posting_date BETWEEN %s AND %s
+    """,
         (sales_person, start_date, end_date),
         as_dict=True,
     )
@@ -150,7 +163,7 @@ def calculate_cash_commission(sales_person, rule, date=None):
 
     commission = 0
 
-    if total_net_total > 0 and total_outstanding == 0:
+    if total_net_total > 0 and total_outstanding <= 10:
         matching_slab = next(
             (
                 slab
